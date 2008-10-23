@@ -4,7 +4,7 @@
 /**
  * Implementation of hook_install().
  */
-function search_install() {
+function tsearch_install() {
   // Create tables.
   drupal_install_schema('search');
 }
@@ -12,7 +12,7 @@ function search_install() {
 /**
  * Implementation of hook_uninstall().
  */
-function search_uninstall() {
+function tsearch_uninstall() {
   // Remove tables.
   drupal_uninstall_schema('search');
 
@@ -24,7 +24,7 @@ function search_uninstall() {
 /**
  * Implementation of hook_schema().
  */
-function search_schema() {
+function tsearch_schema() {
   $schema['search_dataset'] = array(
     'description' => t('Stores items that will be searched.'),
     'fields' => array(

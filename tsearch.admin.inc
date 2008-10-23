@@ -9,7 +9,7 @@
 /**
  * Menu callback: confirm wiping of the index.
  */
-function search_wipe_confirm() {
+function tsearch_wipe_confirm() {
   return confirm_form(array(), t('Are you sure you want to re-index the site?'),
                   'admin/settings/search', t(' The search index is not cleared but systematically updated to reflect the new settings. Searching will continue to work but new content won\'t be indexed until all existing content has been re-indexed. This action cannot be undone.'), t('Re-index site'), t('Cancel'));
 }
@@ -17,9 +17,9 @@ function search_wipe_confirm() {
 /**
  * Handler for wipe confirmation
  */
-function search_wipe_confirm_submit(&$form, &$form_state) {
+function tsearch_wipe_confirm_submit(&$form, &$form_state) {
   if ($form['confirm']) {
-    search_wipe();
+    tsearch_wipe();
     drupal_set_message(t('The index will be rebuilt.'));
     $form_state['redirect'] = 'admin/settings/search';
     return;
@@ -31,9 +31,9 @@ function search_wipe_confirm_submit(&$form, &$form_state) {
  *
  * @ingroup forms
  * @see system_settings_form()
- * @see search_admin_settings_validate()
+ * @see tsearch_admin_settings_validate()
  */
-function search_admin_settings() {
+function tsearch_admin_settings() {
   // Collect some stats
   $remaining = 0;
   $total = 0;
@@ -72,7 +72,7 @@ function search_admin_settings() {
 /**
  * Validate callback.
  */
-function search_admin_settings_validate($form, &$form_state) {
+function tsearch_admin_settings_validate($form, &$form_state) {
   if ($form_state['values']['op'] == t('Re-index site')) {
     drupal_goto('admin/settings/search/wipe');
   }
@@ -80,6 +80,6 @@ function search_admin_settings_validate($form, &$form_state) {
   if ((variable_get('minimum_word_size', 3) != $form_state['values']['minimum_word_size']) ||
       (variable_get('overlap_cjk', TRUE) != $form_state['values']['overlap_cjk'])) {
     drupal_set_message(t('The index will be rebuilt.'));
-    search_wipe();
+    tsearch_wipe();
   }
 }

@@ -9,7 +9,7 @@
 /**
  * Menu callback; presents the search form and/or search results.
  */
-function search_view($type = 'node') {
+function tsearch_view($type = 'node') {
   // Search form submits with POST but redirects to GET. This way we can keep
   // the search query URL clean as a whistle:
   // search/type/keyword+keyword
@@ -21,7 +21,7 @@ function search_view($type = 'node') {
       drupal_goto('search/node');
     }
 
-    $keys = search_get_keys();
+    $keys = tsearch_get_keys();
     // Only perform search if there is non-whitespace search term:
     $results = '';
     if (trim($keys)) {
@@ -29,13 +29,13 @@ function search_view($type = 'node') {
       watchdog('search', '%keys (@type).', array('%keys' => $keys, '@type' => module_invoke($type, 'search', 'name')), WATCHDOG_NOTICE, l(t('results'), 'search/'. $type .'/'. $keys));
 
       // Collect the search results:
-      $results = search_data($keys, $type);
+      $results = tsearch_data($keys, $type);
 
       if ($results) {
         $results = theme('box', t('Search results'), $results);
       }
       else {
-        $results = theme('box', t('Your search yielded no results'), search_help('search#noresults', drupal_help_arg()));
+        $results = theme('box', t('Your search yielded no results'), tsearch_help('search#noresults', drupal_help_arg()));
       }
     }
 
@@ -107,17 +107,17 @@ function template_preprocess_search_result(&$variables) {
 /**
  * As the search form collates keys from other modules hooked in via
  * hook_form_alter, the validation takes place in _submit.
- * search_form_validate() is used solely to set the 'processed_keys' form
+ * tsearch_form_validate() is used solely to set the 'processed_keys' form
  * value for the basic search form.
  */
-function search_form_validate($form, &$form_state) {
+function tsearch_form_validate($form, &$form_state) {
   form_set_value($form['basic']['inline']['processed_keys'], trim($form_state['values']['keys']), $form_state);
 }
 
 /**
  * Process a search form submission.
  */
-function search_form_submit($form, &$form_state) {
+function tsearch_form_submit($form, &$form_state) {
   $keys = $form_state['values']['processed_keys'];
   if ($keys == '') {
     form_set_error('keys', t('Please enter some keywords.'));
