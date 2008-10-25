@@ -357,10 +357,10 @@ function tsearch_index_node($nid, $update = NULL) {
   else {
     db_query("INSERT INTO {tsearch_node} (nid, node_tsvector, ts_language, updated)
               VALUES (%d,
-                setweight(to_tsvector(coalesce(%s,'')), 'A') ||
-                setweight(to_tsvector(coalesce(%s,'')), 'B') ||
-                setweight(to_tsvector(coalesce(%s,'')), 'C') ||
-                setweight(to_tsvector(coalesce(%s,'')), 'D'),
+                setweight(to_tsvector(coalesce('%s','')), 'A') ||
+                setweight(to_tsvector(coalesce('%s','')), 'B') ||
+                setweight(to_tsvector(coalesce('%s','')), 'C') ||
+                setweight(to_tsvector(coalesce('%s','')), 'D'),
               '%s', %d)",
              array(':nid' => $nid,
                    ':title' => $text['title'],
