@@ -72,13 +72,13 @@ SQL;
 
   // The main search index. Change to GIST if you have very frequent content changes.
   db_query("CREATE INDEX search_idx
-             ON tsearch_node
-             USING gin (node_tsvector);");
+            ON tsearch_node
+            USING gin (node_tsvector);");
 
   // Index for the updated column.
   db_query("CREATE INDEX updated_idx
-             ON tsearch_node
-             USING btree (updated);");
+            ON tsearch_node
+            USING btree (updated);");
 }
 
 /**
