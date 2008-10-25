@@ -332,12 +332,17 @@ function tsearch_index_node($nid, $update = NULL) {
   $node = node_build_content($node, FALSE, FALSE);
   $node->body = drupal_render($node->content);
 
-  $text = '<h1>'. check_plain($node->title) .'</h1>'. $node->body;
+  $text = array();
+  $text['title'] = check_plain($node->title);
+  $text['extra'] = '';
+  $text['teaser'] = tsearch_simplify($node->teaser);
+  $text['body'] = tsearch_simplify($node->body);
+
 
   // Fetch extra data normally not visible
   $extra = node_invoke_nodeapi($node, 'update index');
   foreach ($extra as $t) {
-    $text .= $t;
+    $text['extra'] .= $t;
   }
 
   // Now, let's stick it in the database
@@ -351,9 +356,17 @@ function tsearch_index_node($nid, $update = NULL) {
   }
   else {
     db_query("INSERT INTO {tsearch_node} (nid, node_tsvector, ts_language, updated)
-              VALUES (%d, '%s', '%s', %d)",
+              VALUES (%d,
+                setweight(to_tsvector(coalesce(%s,'')), 'A') ||
+                setweight(to_tsvector(coalesce(%s,'')), 'B') ||
+                setweight(to_tsvector(coalesce(%s,'')), 'C') ||
+                setweight(to_tsvector(coalesce(%s,'')), 'D'),
+              '%s', %d)",
              array(':nid' => $nid,
-                   ':text' => $text,
+                   ':title' => $text['title'],
+                   ':extra' => $text['extra'],
+                   ':teaser' => $text['teaser'],
+                   ':body' => $text['body'],
                    ':language' => 'danish', //FIXME: Hardcoded temporarily.
                    ':time' => $_SERVER['REQUEST_TIME'],
             ));
@@ -404,6 +417,17 @@ function tsearch_simplify($text) {
   // results with '20-03-1984' in them.
   // Readable regexp: ([number]+)[punctuation]+(?=[number])
   $text = preg_replace('/(['. PREG_CLASS_NUMBERS .']+)['. PREG_CLASS_PUNCTUATION .']+(?=['. PREG_CLASS_NUMBERS .'])/u', '\1', $text);
+
+  // Remove all the HTML, since PostgreSQL doesn't do that for us.
+  $text = strip_tags($text);
+
+  // The dot, underscore and dash are simply removed. This allows meaningful
+  // search behavior with acronyms and URLs.
+  $text = preg_replace('/[._-]+/', '', $text);
+
+  // With the exception of the rules above, we consider all punctuation,
+  // marks, spacers, etc, to be a word boundary.
+  $text = preg_replace('/['. PREG_CLASS_SEARCH_EXCLUDE .']+/u', ' ', $text);
 
   return $text;
 }
