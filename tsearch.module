@@ -260,11 +260,13 @@ function tsearch_dirty($word = NULL) {
 /**
  * Implementation of hook_cron().
  *
- * Select up to 100 nodes that need indexing and process them.
+ * Select up to 100 nodes that need indexing and send them off for processing.
  */
 function tsearch_cron() {
+  $update_nids = array();
+
   $sql = <<<SQL
-SELECT n.nid
+SELECT n.nid, t.updated
 FROM node AS n
 LEFT JOIN tsearch_node AS t ON (t.nid = n.nid)
 WHERE ((
@@ -277,9 +279,88 @@ WHERE ((
 )
 LIMIT 100;
 SQL;
-  $query = db_query($sql);
 
+  $query = db_query($sql);
+  while ($row = db_fetch_array($query)) {
+    // If updated is not null, we should update the index record instead of
+    // creating a new one, so update on tsearch_node should be passed TRUE
+    $update_nids[$row['nid']] = !is_null($row['updated']);
+  }
+  if (!empty($update_nids)) {
+    tsearch_index_nodes($update_nids);
+  }
 }
+
+/**
+ * Index a bunch of nodes
+ *
+ * @param array $update_nids
+ *    An array of node IDs of the nodes that should be indexed
+ */
+function tsearch_index_nodes($update_nids) {
+  foreach ($update_nids as $nid => $update) {
+    tsearch_index_node($nid, $update);
+  }
+}
+
+/**
+ * Index a single node
+ *
+ * @param integer $nid
+ *    The node ID of the node that should be indexed.
+ * @param boolean $update
+ *    If the index record should be updated instead of created.
+ */
+function tsearch_index_node($nid, $update = NULL) {
+  // If $update is null, we don't know what to do, so let's find out.
+  if (is_null($update)) {
+    $query = db_query("SELECT nid FROM {tsearch_node} WHERE nid = %d", $nid);
+    $result = db_result($query);
+    if ($result && $result == $nid) {
+      $update = TRUE;
+    }
+    else {
+      $update = FALSE;
+    }
+  }
+
+  // Load our node
+  $node = node_load($nid);
+
+  // Build the node body.
+  $node->build_mode = NODE_BUILD_SEARCH_INDEX;
+  $node = node_build_content($node, FALSE, FALSE);
+  $node->body = drupal_render($node->content);
+
+  $text = '<h1>'. check_plain($node->title) .'</h1>'. $node->body;
+
+  // Fetch extra data normally not visible
+  $extra = node_invoke_nodeapi($node, 'update index');
+  foreach ($extra as $t) {
+    $text .= $t;
+  }
+
+  // Now, let's stick it in the database
+  if ($update) {
+    db_query("UPDATE {tsearch_node} SET node_tsvector = to_tsvector('%s')
+              updated = %d WHERE nid = %d",
+             array(':text' => $text,
+                   ':time' => $_SERVER['REQUEST_TIME'],
+                   ':nid' => $nid,
+            ));
+  }
+  else {
+    db_query("INSERT INTO {tsearch_node} (nid, node_tsvector, ts_language, updated)
+              VALUES (%d, '%s', '%s', %d)",
+             array(':nid' => $nid,
+                   ':text' => $text,
+                   ':language' => 'danish', //FIXME: Hardcoded temporarily.
+                   ':time' => $_SERVER['REQUEST_TIME'],
+            ));
+  }
+}
+
+
 
 /**
  * This function is called on shutdown to ensure that tsearch_total is always
