@@ -336,7 +336,7 @@ function tsearch_index_node($nid, $update = NULL) {
   $text['title'] = check_plain($node->title);
   $text['extra'] = '';
   $text['teaser'] = tsearch_simplify($node->teaser);
-  $text['body'] = tsearch_simplify($node->body);
+  $text['body'] = str_replace($text['teaser'], '', tsearch_simplify($node->body));
 
 
   // Fetch extra data normally not visible
