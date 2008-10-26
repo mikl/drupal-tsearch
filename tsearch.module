@@ -385,7 +385,7 @@ function tsearch_index_node($nid, $update = NULL) {
  */
 function tsearch_node_language_name($node) {
   $result = '';
-  if (!empty($node->language) && function_exists('locale')) {
+  if (!empty($node->language) && function_exists('_locale_get_predefined_list')) {
     $predef = _locale_get_predefined_list();
     $result = $predef[$node->language][0];
 
