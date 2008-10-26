@@ -522,10 +522,10 @@ function tsearch_comment($a1, $op) {
 function tsearch_form(&$form_state, $action = '', $keys = '', $type = NULL, $prompt = NULL) {
 
   // Add CSS
-  drupal_add_css(drupal_get_path('module', 'search') .'/search.css', 'module', 'all', FALSE);
+  drupal_add_css(drupal_get_path('module', 'tsearch') .'/tsearch.css', 'module', 'all', FALSE);
 
   if (!$action) {
-    $action = url('search/'. $type);
+    $action = url('tsearch/'. $type);
   }
   if (is_null($prompt)) {
     $prompt = t('Enter your keywords');
@@ -533,7 +533,7 @@ function tsearch_form(&$form_state, $action = '', $keys = '', $type = NULL, $pro
 
   $form = array(
     '#action' => $action,
-    '#attributes' => array('class' => 'search-form'),
+    '#attributes' => array('class' => 'tsearch-form'),
   );
   $form['module'] = array('#type' => 'value', '#value' => $type);
   $form['basic'] = array('#type' => 'item', '#title' => $prompt);
@@ -580,7 +580,7 @@ function tsearch_box(&$form_state, $form_id) {
  */
 function tsearch_box_form_submit($form, &$form_state) {
   $form_id = $form['form_id']['#value'];
-  $form_state['redirect'] = 'search/node/'. trim($form_state['values'][$form_id]);
+  $form_state['redirect'] = 'tsearch/node/'. trim($form_state['values'][$form_id]);
 }
 
 /**
@@ -591,7 +591,7 @@ function tsearch_box_form_submit($form, &$form_state) {
  *
  * @see search-theme-form.tpl.php
  */
-function template_preprocess_search_theme_form(&$variables) {
+function template_preprocess_tsearch_theme_form(&$variables) {
   $variables['search'] = array();
   $hidden = array();
   // Provide variables named after form keys so themers can print each element independently.
@@ -618,7 +618,7 @@ function template_preprocess_search_theme_form(&$variables) {
  *
  * @see search-block-form.tpl.php
  */
-function template_preprocess_search_block_form(&$variables) {
+function template_preprocess_tsearch_block_form(&$variables) {
   $variables['search'] = array();
   $hidden = array();
   // Provide variables named after form keys so themers can print each element independently.
@@ -643,14 +643,14 @@ function template_preprocess_search_block_form(&$variables) {
 function tsearch_data($keys = NULL, $type = 'node') {
 
   if (isset($keys)) {
-    if (module_hook($type, 'search')) {
-      $results = module_invoke($type, 'search', 'search', $keys);
+    if (module_hook($type, 'tsearch')) {
+      $results = module_invoke($type, 'tsearch', 'tsearch', $keys);
       if (isset($results) && is_array($results) && count($results)) {
-        if (module_hook($type, 'search_page')) {
-          return module_invoke($type, 'search_page', $results);
+        if (module_hook($type, 'tsearch_page')) {
+          return module_invoke($type, 'tsearch_page', $results);
         }
         else {
-          return theme('search_results', $results, $type);
+          return theme('tsearch_results', $results, $type);
         }
       }
     }
@@ -662,13 +662,13 @@ function tsearch_data($keys = NULL, $type = 'node') {
  */
 
 function tsearch_forms() {
-  $forms['search_theme_form']= array(
-    'callback' => 'search_box',
-    'callback arguments' => array('search_theme_form'),
+  $forms['tsearch_theme_form']= array(
+    'callback' => 'tsearch_box',
+    'callback arguments' => array('tsearch_theme_form'),
   );
-  $forms['search_block_form']= array(
-    'callback' => 'search_box',
-    'callback arguments' => array('search_block_form'),
+  $forms['tsearch_block_form']= array(
+    'callback' => 'tsearch_box',
+    'callback arguments' => array('tsearch_block_form'),
   );
   return $forms;
 }
