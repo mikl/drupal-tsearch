@@ -408,32 +408,6 @@ function tsearch_node_language_name($node) {
   return $result;
 }
 
-
-/**
- * This function is called on shutdown to ensure that tsearch_total is always
- * up to date (even if cron times out or otherwise fails).
- */
-function tsearch_update_totals() {
-  // Update word IDF (Inverse Document Frequency) counts for new/changed words
-  foreach (search_dirty() as $word => $dummy) {
-    // Get total count
-    $total = db_result(db_query("SELECT SUM(score) FROM {search_index} WHERE word = '%s'", $word));
-    // Apply Zipf's law to equalize the probability distribution
-    $total = log10(1 + 1/(max(1, $total)));
-    db_query("UPDATE {search_total} SET count = %f WHERE word = '%s'", $total, $word);
-    if (!db_affected_rows()) {
-      db_query("INSERT INTO {search_total} (word, count) VALUES ('%s', %f)", $word, $total);
-    }
-  }
-  // Find words that were deleted from tsearch_index, but are still in
-  // tsearch_total. We use a LEFT JOIN between the two tables and keep only the
-  // rows which fail to join.
-  $result = db_query("SELECT t.word AS realword, i.word FROM {search_total} t LEFT JOIN {search_index} i ON t.word = i.word WHERE i.word IS NULL");
-  while ($word = db_fetch_object($result)) {
-    db_query("DELETE FROM {search_total} WHERE word = '%s'", $word->realword);
-  }
-}
-
 /**
  * Simplifies a string according to indexing rules.
  */
