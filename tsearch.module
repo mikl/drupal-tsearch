@@ -165,15 +165,15 @@ function tsearch_block($op = 'list', $delta = 0) {
  * Implementation of hook_menu().
  */
 function tsearch_menu() {
-  $items['search'] = array(
+  $items['tsearch'] = array(
     'title' => 'Search',
     'page callback' => 'search_view',
     'access arguments' => array('search content'),
     'type' => MENU_SUGGESTED_ITEM,
     'file' => 'search.pages.inc',
   );
-  $items['admin/settings/search'] = array(
-    'title' => 'Search settings',
+  $items['admin/settings/tsearch'] = array(
+    'title' => 'TSearch settings',
     'description' => 'Configure relevance settings for search and other indexing options',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('search_admin_settings'),
@@ -181,13 +181,13 @@ function tsearch_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'search.admin.inc',
   );
-  $items['admin/settings/search/wipe'] = array(
+  $items['admin/settings/tsearch/wipe'] = array(
     'title' => 'Clear index',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('search_wipe_confirm'),
     'access arguments' => array('administer search'),
     'type' => MENU_CALLBACK,
-    'file' => 'search.admin.inc',
+    'file' => 'tsearch.admin.inc',
   );
   $items['admin/reports/search'] = array(
     'title' => 'Top search phrases',
@@ -200,22 +200,22 @@ function tsearch_menu() {
   );
 
   foreach (module_implements('search') as $name) {
-    $items['search/'. $name .'/%menu_tail'] = array(
+    $items['tsearch/'. $name .'/%menu_tail'] = array(
       'title callback' => 'module_invoke',
-      'title arguments' => array($name, 'search', 'name', TRUE),
-      'page callback' => 'search_view',
+      'title arguments' => array($name, 'tsearch', 'name', TRUE),
+      'page callback' => 'tsearch_view',
       'page arguments' => array($name),
-      'access callback' => '_search_menu',
+      'access callback' => '_tsearch_menu',
       'access arguments' => array($name),
       'type' => MENU_LOCAL_TASK,
-      'parent' => 'search',
-      'file' => 'search.pages.inc',
+      'parent' => 'tsearch',
+      'file' => 'tsearch.pages.inc',
     );
   }
   return $items;
 }
 
-function _search_menu($name) {
+function _tsearch_menu($name) {
   return user_access('search content') && module_invoke($name, 'search', 'name');
 }
 
@@ -229,32 +229,7 @@ function _search_menu($name) {
  *  (optional) The type of item to wipe.
  */
 function tsearch_wipe($sid = NULL, $type = NULL, $reindex = FALSE) {
-  if ($type == NULL && $sid == NULL) {
-    module_invoke_all('search', 'reset');
-  }
-  else {
-    db_query("DELETE FROM {search_dataset} WHERE sid = %d AND type = '%s'", $sid, $type);
-    db_query("DELETE FROM {search_index} WHERE sid = %d AND type = '%s'", $sid, $type);
-    // Don't remove links if re-indexing.
-    if (!$reindex) {
-      db_query("DELETE FROM {search_node_links} WHERE sid = %d AND type = '%s'", $sid, $type);
-    }
-  }
-}
-
-/**
- * Marks a word as dirty (or retrieves the list of dirty words). This is used
- * during indexing (cron). Words which are dirty have outdated total counts in
- * the tsearch_total table, and need to be recounted.
- */
-function tsearch_dirty($word = NULL) {
-  static $dirty = array();
-  if ($word !== NULL) {
-    $dirty[$word] = TRUE;
-  }
-  else {
-    return $dirty;
-  }
+  db_query("TRUNCATE TABLE tsearch_node");
 }
 
 /**
