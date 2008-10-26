@@ -345,6 +345,8 @@ function tsearch_index_node($nid, $update = NULL) {
     $text['extra'] .= $t;
   }
 
+  $lan = drupal_strtolower(tsearch_node_language_name($node));
+
   // Now, let's stick it in the database
   if ($update) {
     db_query("UPDATE {tsearch_node} SET node_tsvector = to_tsvector('%s')
@@ -357,22 +359,54 @@ function tsearch_index_node($nid, $update = NULL) {
   else {
     db_query("INSERT INTO {tsearch_node} (nid, node_tsvector, ts_language, updated)
               VALUES (%d,
-                setweight(to_tsvector(coalesce('%s','')), 'A') ||
-                setweight(to_tsvector(coalesce('%s','')), 'B') ||
-                setweight(to_tsvector(coalesce('%s','')), 'C') ||
-                setweight(to_tsvector(coalesce('%s','')), 'D'),
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'A') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'B') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'C') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'D'),
               '%s', %d)",
              array(':nid' => $nid,
                    ':title' => $text['title'],
                    ':extra' => $text['extra'],
                    ':teaser' => $text['teaser'],
                    ':body' => $text['body'],
-                   ':language' => 'danish', //FIXME: Hardcoded temporarily.
+                   ':language' => $lan,
                    ':time' => $_SERVER['REQUEST_TIME'],
             ));
   }
 }
 
+/**
+ * Find the correct langugage name for a node
+ *
+ * @param $node
+ *    The node we're working on.
+ * @return string
+ *    The name of the language, in English.
+ */
+function tsearch_node_language_name($node) {
+  $result = '';
+  if (!empty($node->language) && function_exists('locale')) {
+    $predef = _locale_get_predefined_list();
+    $result = $predef[$node->language][0];
+
+    // If the above didn't work, try loading the language with a more expensive call.
+    // Probably only used for custom languages.
+    if (empty($result)) {
+      $result = locale_language_name($node->language);
+    }
+  }
+  // Fall back to the default site language.
+  if (empty($result)) {
+    $result = $GLOBALS['language']->name;
+  }
+
+  // A last desparate measure if none of the above worked, default to English.
+  if (empty($result)) {
+    $result = 'English';
+  }
+
+  return $result;
+}
 
 
 /**
