@@ -324,9 +324,18 @@ function tsearch_index_node($nid, $update = NULL) {
 
   // Now, let's stick it in the database
   if ($update) {
-    db_query("UPDATE {tsearch_node} SET node_tsvector = to_tsvector('%s')
-              updated = %d WHERE nid = %d",
-             array(':text' => $text,
+    db_query("UPDATE {tsearch_node} SET
+              node_tsvector =
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'A') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'B') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'C') ||
+                setweight(to_tsvector('$lan', coalesce('%s','')), 'D'),
+              updated = %d
+              WHERE nid = %d",
+             array(':title' => $text['title'],
+                   ':extra' => $text['extra'],
+                   ':teaser' => $text['teaser'],
+                   ':body' => $text['body'],
                    ':time' => $_SERVER['REQUEST_TIME'],
                    ':nid' => $nid,
             ));
