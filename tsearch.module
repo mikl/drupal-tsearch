@@ -167,24 +167,24 @@ function tsearch_block($op = 'list', $delta = 0) {
 function tsearch_menu() {
   $items['tsearch'] = array(
     'title' => 'Search',
-    'page callback' => 'search_view',
+    'page callback' => 'tsearch_view',
     'access arguments' => array('search content'),
     'type' => MENU_SUGGESTED_ITEM,
-    'file' => 'search.pages.inc',
+    'file' => 'tsearch.pages.inc',
   );
   $items['admin/settings/tsearch'] = array(
     'title' => 'TSearch settings',
     'description' => 'Configure relevance settings for search and other indexing options',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('search_admin_settings'),
+    'page arguments' => array('tsearch_admin_settings'),
     'access arguments' => array('administer search'),
     'type' => MENU_NORMAL_ITEM,
-    'file' => 'search.admin.inc',
+    'file' => 'tsearch.admin.inc',
   );
   $items['admin/settings/tsearch/wipe'] = array(
     'title' => 'Clear index',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('search_wipe_confirm'),
+    'page arguments' => array('tsearch_wipe_confirm'),
     'access arguments' => array('administer search'),
     'type' => MENU_CALLBACK,
     'file' => 'tsearch.admin.inc',
@@ -252,10 +252,10 @@ WHERE ((
     t.updated IS NULL
   )
 )
-LIMIT 100;
+LIMIT %d;
 SQL;
 
-  $query = db_query($sql);
+  $query = db_query($sql, variable_get('tsearch_cron_limit', 100));
   while ($row = db_fetch_array($query)) {
     // If updated is not null, we should update the index record instead of
     // creating a new one, so update on tsearch_node should be passed TRUE
