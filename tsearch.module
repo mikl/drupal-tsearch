@@ -655,7 +655,6 @@ SQL;
   while ($row = db_fetch_array($query)) {
     $result[] = _tsearch_render_node_result($row['nid'], $row['rank']);
   }
-  dpm($result);
   return $result;
 }
 
