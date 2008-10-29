@@ -58,6 +58,7 @@ function tsearch_install() {
 CREATE TABLE tsearch_node
 (
   nid int_unsigned NOT NULL,
+  vid int_unsigned NOT NULL,
   node_tsvector tsvector NOT NULL,
   ts_language character varying(30),
   updated int_unsigned NOT NULL DEFAULT 0,
@@ -87,8 +88,6 @@ SQL;
 function tsearch_uninstall() {
   // Remove tables.
   db_query("DROP TABLE tsearch_node;");
-  db_query("DROP INDEX search_idx;");
-  db_query("DROP INDEX updated_idx;");
 
   variable_del('minimum_word_size');
   variable_del('overlap_cjk');

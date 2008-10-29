@@ -324,7 +324,7 @@ function tsearch_index_node($nid, $update = NULL) {
 
   // Now, let's stick it in the database
   if ($update) {
-    db_query("UPDATE {tsearch_node} SET
+    db_query("UPDATE {tsearch_node} SET vid = %d
               node_tsvector =
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'A') ||
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'B') ||
@@ -332,7 +332,8 @@ function tsearch_index_node($nid, $update = NULL) {
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'D'),
               updated = %d
               WHERE nid = %d",
-             array(':title' => $text['title'],
+             array(':vid' => $node->vid,
+                   ':title' => $text['title'],
                    ':extra' => $text['extra'],
                    ':teaser' => $text['teaser'],
                    ':body' => $text['body'],
@@ -341,14 +342,15 @@ function tsearch_index_node($nid, $update = NULL) {
             ));
   }
   else {
-    db_query("INSERT INTO {tsearch_node} (nid, node_tsvector, ts_language, updated)
-              VALUES (%d,
+    db_query("INSERT INTO {tsearch_node} (nid, vid, node_tsvector, ts_language, updated)
+              VALUES (%d, %d,
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'A') ||
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'B') ||
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'C') ||
                 setweight(to_tsvector('$lan', coalesce('%s','')), 'D'),
               '%s', %d)",
              array(':nid' => $nid,
+                   ':vid' => $node->vid,
                    ':title' => $text['title'],
                    ':extra' => $text['extra'],
                    ':teaser' => $text['teaser'],
