@@ -116,23 +116,23 @@ function tsearch_help($path, $arg) {
  */
 function tsearch_theme() {
   return array(
-    'search_theme_form' => array(
+    'tsearch_theme_form' => array(
       'arguments' => array('form' => NULL),
-      'template' => 'search-theme-form',
+      'template' => 'tsearch-theme-form',
     ),
-    'search_block_form' => array(
+    'tsearch_block_form' => array(
       'arguments' => array('form' => NULL),
-      'template' => 'search-block-form',
+      'template' => 'tsearch-block-form',
     ),
-    'search_result' => array(
+    'tsearch_result' => array(
       'arguments' => array('result' => NULL, 'type' => NULL),
-      'file' => 'search.pages.inc',
-      'template' => 'search-result',
+      'file' => 'tsearch.pages.inc',
+      'template' => 'tsearch-result',
     ),
-    'search_results' => array(
+    'tsearch_results' => array(
       'arguments' => array('results' => NULL, 'type' => NULL),
-      'file' => 'search.pages.inc',
-      'template' => 'search-results',
+      'file' => 'tsearch.pages.inc',
+      'template' => 'tsearch-results',
     ),
   );
 }
@@ -155,7 +155,7 @@ function tsearch_block($op = 'list', $delta = 0) {
     return $blocks;
   }
   else if ($op == 'view' && user_access('search content')) {
-    $block['content'] = drupal_get_form('search_block_form');
+    $block['content'] = drupal_get_form('tsearch_block_form');
     $block['subject'] = t('Search');
     return $block;
   }
@@ -461,6 +461,21 @@ function tsearch_comment($a1, $op) {
 }
 
 /**
+ * Helper function for grabbing search keys.
+ */
+function tsearch_get_keys() {
+  static $return;
+  if (!isset($return)) {
+    // Extract keys as remainder of path
+    // Note: support old GET format of searches for existing links.
+    $path = explode('/', $_GET['q'], 3);
+    $keys = empty($_REQUEST['keys']) ? '' : $_REQUEST['keys'];
+    $return = count($path) == 3 ? $path[2] : $keys;
+  }
+  return $return;
+}
+
+/**
  * @defgroup search Search interface
  * @{
  * The Drupal search interface manages a global search mechanism.
@@ -553,8 +568,8 @@ function tsearch_box(&$form_state, $form_id) {
     '#attributes' => array('title' => t('Enter the terms you wish to search for.')),
   );
   $form['submit'] = array('#type' => 'submit', '#value' => t('Search'));
-  $form['#submit'][] = 'search_box_form_submit';
-  $form['#validate'][] = 'search_box_form_validate';
+  $form['#submit'][] = 'tsearch_box_form_submit';
+  $form['#validate'][] = 'tsearch_box_form_validate';
 
   return $form;
 }
@@ -625,20 +640,21 @@ function template_preprocess_tsearch_block_form(&$variables) {
  * Perform a standard search on the given keys, and return the formatted results.
  */
 function tsearch_data($keys = NULL, $type = 'node') {
+  $sql = <<<SQL
+SELECT t.nid, ts_rank_cd(node_tsvector, query, 16) AS rank
+FROM tsearch_node AS t, plainto_tsquery('%s') query
+WHERE query @@ node_tsvector
+ORDER BY rank DESC
+LIMIT 10
+SQL;
 
-  if (isset($keys)) {
-    if (module_hook($type, 'tsearch')) {
-      $results = module_invoke($type, 'tsearch', 'tsearch', $keys);
-      if (isset($results) && is_array($results) && count($results)) {
-        if (module_hook($type, 'tsearch_page')) {
-          return module_invoke($type, 'tsearch_page', $results);
-        }
-        else {
-          return theme('tsearch_results', $results, $type);
-        }
-      }
-    }
+  $result = array();
+  $query = db_query($sql, $keys);
+  while ($row = db_fetch_array($query)) {
+    $result[] = _tsearch_render_node_result($row['nid'], $row['rank']);
   }
+  dpm($result);
+  return $result;
 }
 
 /**
@@ -655,4 +671,42 @@ function tsearch_forms() {
     'callback arguments' => array('tsearch_block_form'),
   );
   return $forms;
+}
+
+/**
+ * Render the matched nodes with their data
+ *
+ * @param integer $nid
+ *    The node ID of the matched node.
+ * @param float $rank
+ *    The search rank/score
+ * @return array
+ *    Structured result data array.
+ */
+function _tsearch_render_node_result($nid, $rank) {
+  // Build the node body.
+  $node = node_load($nid);
+  $node->build_mode = NODE_BUILD_SEARCH_RESULT;
+  $node = node_build_content($node, FALSE, FALSE);
+  $node->body = drupal_render($node->content);
+
+  // Fetch comments for snippet.
+  $node->body .= module_invoke('comment', 'nodeapi', $node, 'update index');
+  // Fetch terms for snippet.
+  $node->body .= module_invoke('taxonomy', 'nodeapi', $node, 'update index');
+
+  $extra = node_invoke_nodeapi($node, 'search result');
+  $data = array(
+    'link' => url('node/'. $nid, array('absolute' => TRUE)),
+    'type' => check_plain(node_get_types('name', $node)),
+    'title' => $node->title,
+    'user' => theme('username', $node),
+    'date' => $node->changed,
+    'node' => $node,
+    'extra' => $extra,
+    'score' => $rank,
+    'snippet' => ''// search_excerpt($keys, $node->body),
+  );
+
+  return $data;
 }

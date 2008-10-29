@@ -18,35 +18,34 @@ function tsearch_view($type = 'node') {
       // Note: search/node can not be a default tab because it would take on the
       // path of its parent (search). It would prevent remembering keywords when
       // switching tabs. This is why we drupal_goto to it from the parent instead.
-      drupal_goto('search/node');
+      drupal_goto('tsearch/node');
     }
+
+    // Construct the search form.
+    $output = drupal_get_form('tsearch_form', NULL, $keys, $type);;
 
     $keys = tsearch_get_keys();
     // Only perform search if there is non-whitespace search term:
-    $results = '';
     if (trim($keys)) {
       // Log the search keys:
-      watchdog('search', '%keys (@type).', array('%keys' => $keys, '@type' => module_invoke($type, 'search', 'name')), WATCHDOG_NOTICE, l(t('results'), 'search/'. $type .'/'. $keys));
+      watchdog('search', '%keys (@type).', array('%keys' => $keys, '@type' => module_invoke($type, 'tsearch', 'name')), WATCHDOG_NOTICE, l(t('results'), 'tsearch/'. $type .'/'. $keys));
 
       // Collect the search results:
       $results = tsearch_data($keys, $type);
 
-      if ($results) {
-        $results = theme('box', t('Search results'), $results);
+      if (!empty($results)) {
+        $rendered_results = theme('tsearch_results', $results, $type);
+        $output .= theme('box', t('Search results'), $rendered_results);
       }
       else {
-        $results = theme('box', t('Your search yielded no results'), tsearch_help('search#noresults', drupal_help_arg()));
+        $output .= theme('box', t('Your search yielded no results'), tsearch_help('search#noresults', drupal_help_arg()));
       }
     }
-
-    // Construct the search form.
-    $output = drupal_get_form('search_form', NULL, $keys, $type);
-    $output .= $results;
 
     return $output;
   }
 
-  return drupal_get_form('search_form', NULL, empty($keys) ? '' : $keys, $type);
+  return drupal_get_form('tsearch_form', NULL, empty($keys) ? '' : $keys, $type);
 }
 
 /**
@@ -58,14 +57,14 @@ function tsearch_view($type = 'node') {
  *
  * @see search-results.tpl.php
  */
-function template_preprocess_search_results(&$variables) {
+function template_preprocess_tsearch_results(&$variables) {
   $variables['search_results'] = '';
   foreach ($variables['results'] as $result) {
-    $variables['search_results'] .= theme('search_result', $result, $variables['type']);
+    $variables['search_results'] .= theme('tsearch_result', $result, $variables['type']);
   }
   $variables['pager'] = theme('pager', NULL, 10, 0);
   // Provide alternate search results template.
-  $variables['template_files'][] = 'search-results-'. $variables['type'];
+  $variables['template_files'][] = 'tsearch-results-'. $variables['type'];
 }
 
 /**
@@ -77,7 +76,7 @@ function template_preprocess_search_results(&$variables) {
  *
  * @see search-result.tpl.php
  */
-function template_preprocess_search_result(&$variables) {
+function template_preprocess_tsearch_result(&$variables) {
   $result = $variables['result'];
   $variables['url'] = check_url($result['link']);
   $variables['title'] = check_plain($result['title']);
@@ -125,6 +124,6 @@ function tsearch_form_submit($form, &$form_state) {
   }
 
   $type = $form_state['values']['module'] ? $form_state['values']['module'] : 'node';
-  $form_state['redirect'] = 'search/'. $type .'/'. $keys;
+  $form_state['redirect'] = 'tsearch/'. $type .'/'. $keys;
   return;
 }
