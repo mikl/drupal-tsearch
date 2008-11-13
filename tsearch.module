@@ -642,16 +642,24 @@ function template_preprocess_tsearch_block_form(&$variables) {
  * Perform a standard search on the given keys, and return the formatted results.
  */
 function tsearch_data($keys = NULL, $type = 'node') {
-  $sql = <<<SQL
+  $count_query = <<<SQL
+SELECT COUNT(t.nid)
+FROM tsearch_node AS t, plainto_tsquery('%s') query
+WHERE query @@ node_tsvector
+SQL;
+
+
+  $query = <<<SQL
 SELECT t.nid, ts_rank_cd(node_tsvector, query, 16) AS rank
 FROM tsearch_node AS t, plainto_tsquery('%s') query
 WHERE query @@ node_tsvector
 ORDER BY rank DESC
-LIMIT 10
 SQL;
 
+
+
   $result = array();
-  $query = db_query($sql, $keys);
+  $query = pager_query($query, 10, 0, $count_query, $keys);
   while ($row = db_fetch_array($query)) {
     $result[] = _tsearch_render_node_result($row['nid'], $row['rank']);
   }
