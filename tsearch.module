@@ -648,7 +648,6 @@ FROM tsearch_node AS t, plainto_tsquery('%s') query
 WHERE query @@ node_tsvector
 SQL;
 
-
   $query = <<<SQL
 SELECT t.nid, ts_rank_cd(node_tsvector, query, 16) AS rank
 FROM tsearch_node AS t, plainto_tsquery('%s') query
@@ -656,14 +655,16 @@ WHERE query @@ node_tsvector
 ORDER BY rank DESC
 SQL;
 
-
-
-  $result = array();
+  $results = array();
   $query = pager_query($query, 10, 0, $count_query, $keys);
   while ($row = db_fetch_array($query)) {
-    $result[] = _tsearch_render_node_result($row['nid'], $row['rank']);
+    $results[] = _tsearch_render_node_result($row['nid'], $row['rank']);
   }
-  return $result;
+
+  // Get a highlighted snippet of the search results
+  $results = _tsearch_get_headlines($results, $keys);
+
+  return $results;
 }
 
 /**
@@ -718,4 +719,30 @@ function _tsearch_render_node_result($nid, $rank) {
   );
 
   return $data;
+}
+
+/**
+ * Get a highlighted snippet of the search result
+ *
+ * Uses PostgreSQLs ts_headline function to generate the snippet
+ *
+ * @param array $results
+ *    The search results we're working on.
+ * @param string $keys
+ *    The current search keys
+ */
+function _tsearch_get_headlines($results, $keys) {
+  $headline_query = <<<SQL
+SELECT ts_headline('%s', '%s', plainto_tsquery('%s'),
+'StartSel = <strong>, StopSel = </strong>, MaxWords=100'
+);
+SQL;
+
+  foreach ($results as $key => $data) {
+    $lan = drupal_strtolower(tsearch_node_language_name($node));
+    $results[$key]['snippet'] = db_result(db_query($headline_query, $lan,
+                                                   $data['node']->body, $keys));
+  }
+
+  return $results;
 }
