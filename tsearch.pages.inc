@@ -110,7 +110,8 @@ function template_preprocess_tsearch_result(&$variables) {
  * value for the basic search form.
  */
 function tsearch_form_validate($form, &$form_state) {
-  form_set_value($form['basic']['inline']['processed_keys'], trim($form_state['values']['keys']), $form_state);
+  form_set_value($form['basic']['inline']['processed_keys'],
+                 trim($form_state['values']['keys']), $form_state);
 }
 
 /**
